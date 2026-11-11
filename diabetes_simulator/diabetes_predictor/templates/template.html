@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Diabetes Impact Simulator</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2rem; }
+        .section { margin-bottom: 2rem; padding: 1rem; border: 1px solid #ccc; border-radius: 8px; }
+        .risk-meter { width: 100%; height: 30px; background: #eee; border-radius: 5px; overflow: hidden; }
+        .risk-fill { height: 100%; width: 0%; transition: width 0.3s; }
+        .low-risk { background: #4caf50; }
+        .high-risk { background: #f44336; }
+        .mental-low-risk { background: #2196F3; }  /* Blue for mental health low risk */
+        .mental-high-risk { background: #ff9800; } /* Orange for mental health high risk */
+        .slider-group { margin: 1rem 0; }
+        label { display: block; font-weight: bold; margin-bottom: 0.3rem; }
+        input[type=range] { width: 60%; }
+        .value-display { display: inline-block; margin-left: 0.5rem; min-width: 3rem; }
+        button { padding: 0.5rem 1.5rem; font-size: 1rem; }
+        h2 { margin-bottom: 0.5rem; }
+
+        /* PHQ-9 Questionnaire styling */
+        .phq-group { margin-bottom: 1.5rem; }
+        .phq-group label:first-child { display: block; margin-bottom: 0.3rem; font-weight: normal; }
+
+        /* Two-column layout for risk meters */
+        .risk-grid { display: flex; gap: 2rem; margin-bottom: 1rem; }
+        .risk-grid > div { flex: 1; }
+    </style>
+</head>
+<body>
+    <h2>Diabetes Impact Simulator</h2>
+
+    {% if error %}
+        <div style="color:red; font-weight:bold;">{{ error }}</div>
+    {% endif %}
+
+    <!-- Original prediction form -->
+    <div class="section">
+        <h3>Your Health Data</h3>
+        <form method="post" id="predict-form">
+            {% csrf_token %}
+            <label>Pregnancies (0 - 30)</label>
+            <input type="number" step="1" name="preg" min="0" max="30" required><br><br>
+            <label>Glucose (50 - 400)</label>
+            <input type="number" step="1" name="glc" min="50" max="400" required><br><br>
+            <label>Blood Pressure (60 - 200)</label>
+            <input type="number" step="1" name="pressure" min="60" max="200" required><br><br>
+            <label>Skin Thickness (5 - 80)</label>
+            <input type="number" step="1" name="skin" min="5" max="80" required><br><br>
+            <label>Insulin (2 - 900)</label>
+            <input type="number" step="1" name="insulin" min="2" max="900" required><br><br>
+            <label>BMI (14 - 65)</label>
+            <input type="number" step="0.1" name="bmi" min="14" max="65" required><br><br>
+            <label>Diabetes Pedigree Function (0.07 - 3)</label>
+            <input type="number" step="0.01" name="dpfunc" min="0.07" max="3" required><br><br>
+            <label>Age (1 - 110)</label>
+            <input type="number" step="1" name="age" min="1" max="110" required><br><br>
+
+            <div class="section">
+                <h3>PHQ-9 Mental Health Check Questionnaire</h3>
+                <p>Over the last 2 weeks...</p>
+                <div class="phq-group">
+                    <label>1. Little interest or pleasure in doing things</label>
+                    <select name="q1" required>
+                        <option value="1">Not at all</option>
+                        <option value="2">Several days</option>
+                        <option value="3">More than half the days</option>
+                        <option value="4">Nearly everyday</option>
+                    </select>
+                </div><br>
+                <div class="phq-group">
+                    <label>2. Feeling down, depressed, or hopeless</label>
+                    <select name="q2" required>
+                        <option value="1">Not at all</option>
+                        <option value="2">Several days</option>
+                        <option value="3">More than half the days</option>
+                        <option value="4">Nearly everyday</option>
+                    </select>
+                </div><br>
+                <div class="phq-group">
+                    <label>3. Trouble falling or staying asleep, or sleeping too much</label>
+                    <select name="q3" required>
+                        <option value="1">Not at all</option>
+                        <option value="2">Several days</option>
+                        <option value="3">More than half the days</option>
+                        <option value="4">Nearly everyday</option>
+                    </select>
+                </div><br>
+                <div class="phq-group">
+                    <label>4. Feeling tired or having little energy</label>
+                    <select name="q4" required>
+                        <option value="1">Not at all</option>
+                        <option value="2">Several days</option>
+                        <option value="3">More than half the days</option>
+                        <option value="4">Nearly everyday</option>
+                    </select>
+                </div><br>
+                <div class="phq-group">
+                    <label>5. Poor appetite or overeating</label>
+                    <select name="q5" required>
+                        <option value="1">Not at all</option>
+                        <option value="2">Several days</option>
+                        <option value="3">More than half the days</option>
+                        <option value="4">Nearly everyday</option>
+                    </select>
+                </div><br>
+                <div class="phq-group">
+                    <label>6. Feeling bad about yourself — or that you are a failure or have let yourself or your family down</label>
+                    <select name="q6" required>
+                        <option value="1">Not at all</option>
+                        <option value="2">Several days</option>
+                        <option value="3">More than half the days</option>
+                        <option value="4">Nearly everyday</option>
+                    </select>
+                </div><br>
+                <div class="phq-group">
+                    <label>7. Trouble concentrating on things, such as reading the newspaper or watching television</label>
+                    <select name="q7" required>
+                        <option value="1">Not at all</option>
+                        <option value="2">Several days</option>
+                        <option value="3">More than half the days</option>
+                        <option value="4">Nearly everyday</option>
+                    </select>
+                </div><br>
+                <div class="phq-group">
+                    <label>8. Moving or speaking so slowly that other people could have noticed? Or the opposite — being so fidgety or restless that you have been moving around a lot more than usual</label>
+                    <select name="q8" required>
+                        <option value="1">Not at all</option>
+                        <option value="2">Several days</option>
+                        <option value="3">More than half the days</option>
+                        <option value="4">Nearly everyday</option>
+                    </select>
+                </div><br>
+                <div class="phq-group">
+                    <label>9. Thoughts that you would be better off dead or of hurting yourself in some way</label>
+                    <select name="q9" required>
+                        <option value="1">Not at all</option>
+                        <option value="2">Several days</option>
+                        <option value="3">More than half the days</option>
+                        <option value="4">Nearly everyday</option>
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit">Predict</button>
+        </form>
+    </div>
+
+    <!-- What-If panel: only shown after prediction -->
+    {% if pred_info %}
+    <div class="section" id="whatif-panel">
+        <h3>Your Predicted Risk</h3>
+
+        <!-- Two-column meter layout -->
+        <div class="risk-grid">
+            <!-- Diabetes risk meter -->
+            <div>
+                <h4>Diabetes Risk</h4>
+                <div class="risk-meter">
+                {% if pred_info.risk_class == 1 %}
+                    <div id="risk-bar" class="risk-fill high-risk" style="width: {% widthratio pred_info.probability 1 100 %}%;"></div>
+                {% else %}
+                    <div id="risk-bar" class="risk-fill low-risk" style="width: {% widthratio pred_info.probability 1 100 %}%;"></div>
+                {% endif %}
+                </div>
+                <p id="risk-message">{{ pred_info.message }}</p>
+            </div>
+
+            <!-- Mental health risk meter -->
+            {% if mental_info is not None %}
+            <div>
+                <h4>Depression Screening</h4>
+                <div class="risk-meter">
+                {% if mental_info == 1 %}
+                    <div id="mental-bar" class="risk-fill mental-high-risk" style="width: 100%;"></div>
+                {% else %}
+                    <div id="mental-bar" class="risk-fill mental-low-risk" style="width: 20%;"></div>
+                {% endif %}
+                </div>
+                <p>
+                {% if mental_info == 1 %}
+                    <strong style="color:#ff9800;">High risk</strong> — PHQ‑9 score suggests moderate to severe depression.
+                {% else %}
+                    <strong style="color:#2196F3;">Low risk</strong> — PHQ‑9 score within normal range.
+                {% endif %}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+
+        <h3>What-If Simulator</h3>
+        <p>Adjust the sliders to see how lifestyle changes could impact your risk.</p>
+
+        <div class="slider-group">
+            <label for="bmi-slider">Lose Weight (BMI reduction)</label>
+            <input type="range" id="bmi-slider" min="-5" max="0" step="0.1" value="0">
+            <span class="value-display" id="bmi-value">0</span> kg/m²
+        </div>
+
+        <div class="slider-group">
+            <label for="activity-slider">Increase Activity</label>
+            <input type="range" id="activity-slider" min="0" max="10" step="1" value="0">
+            <span class="value-display" id="activity-value">0</span> units
+        </div>
+
+        <div class="slider-group">
+            <label for="med-slider">Medication Adherence</label>
+            <input type="range" id="med-slider" min="0" max="10" step="1" value="0">
+            <span class="value-display" id="med-value">0</span> units
+        </div>
+
+        <p>Updated Risk: <strong id="updated-message">-</strong></p>
+        <div class="risk-meter">
+            <div id="updated-risk-bar" class="risk-fill" style="width: 0%;"></div>
+        </div>
+    </div>
+    {% endif %}
+
+    <script>
+        // Helper to get CSRF token from cookie (Django's standard method)
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
+
+        // Elements
+        const bmiSlider = document.getElementById('bmi-slider');
+        const activitySlider = document.getElementById('activity-slider');
+        const medSlider = document.getElementById('med-slider');
+        const bmiValueDisplay = document.getElementById('bmi-value');
+        const activityValueDisplay = document.getElementById('activity-value');
+        const medValueDisplay = document.getElementById('med-value');
+        const updatedMessage = document.getElementById('updated-message');
+        const updatedRiskBar = document.getElementById('updated-risk-bar');
+
+        // Update display of slider values
+        function updateSliderDisplays() {
+            bmiValueDisplay.textContent = bmiSlider.value;
+            activityValueDisplay.textContent = activitySlider.value;
+            medValueDisplay.textContent = medSlider.value;
+        }
+
+        // Build updates from slider positions
+        function getUpdates() {
+            const updates = {};
+            const bmiChange = parseFloat(bmiSlider.value);
+            if (bmiChange !== 0) updates['BMI'] = bmiChange;
+
+            const activityLevel = parseInt(activitySlider.value);
+            if (activityLevel > 0) {
+                updates['Glucose'] = -activityLevel * 2;
+                updates['BloodPressure'] = -activityLevel * 1;
+            }
+
+            const medLevel = parseInt(medSlider.value);
+            if (medLevel > 0) {
+                if (updates['Glucose']) {
+                    updates['Glucose'] -= medLevel * 3;
+                } else {
+                    updates['Glucose'] = -medLevel * 3;
+                }
+            }
+            return updates;
+        }
+
+        // Send simulation request to server
+        async function simulate() {
+            const updates = getUpdates();
+            const response = await fetch('/simulate/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({ updates: updates })
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                updatedMessage.textContent = 'Error: ' + errorData.error;
+                updatedRiskBar.style.width = '0%';
+                return;
+            }
+            const data = await response.json();
+            updatedRiskBar.style.width = (data.probability * 100) + '%';
+            updatedRiskBar.className = 'risk-fill ' + (data.risk_class === 1 ? 'high-risk' : 'low-risk');
+            updatedMessage.textContent = data.message;
+        }
+
+        // Attach event listeners to sliders
+        bmiSlider.addEventListener('input', () => { updateSliderDisplays(); simulate(); });
+        activitySlider.addEventListener('input', () => { updateSliderDisplays(); simulate(); });
+        medSlider.addEventListener('input', () => { updateSliderDisplays(); simulate(); });
+
+        updateSliderDisplays();
+    </script>
+</body>
+</html>
